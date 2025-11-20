@@ -1,0 +1,52 @@
+name: Manual CI Pipeline
+
+on:
+  workflow_dispatch:     # Enables "Run workflow" button
+
+jobs:
+  manual_run_job:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 1. Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 2. Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: 3. Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 4. Train Model
+        run: |
+          python train.py
+
+      - name: 5. Test Model
+        run: |
+          python test.py
+
+      - name: 6. Upload Model Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: savedmodel
+          path: savedmodel.pth
+
+      - name: 7. Build Docker Image
+        run: |
+          docker build -t manual-mlops-image:${{ github.sha }} .
+
+      - name: 8. Save CI Metadata
+        run: |
+          echo "Triggered manually!" > ci_info.txt
+          echo "Branch: ${GITHUB_REF#refs/heads/}" >> ci_info.txt
+          echo "Commit: ${GITHUB_SHA}" >> ci_info.txt
+
+      - name: 9. Upload Metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci_metadata
+          path: ci_info.txt
